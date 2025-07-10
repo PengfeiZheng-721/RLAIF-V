@@ -107,23 +107,14 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
 
         image_path = chosen['metainfos']['image_path']
         assert chosen['metainfos']['image_path'] == rejected['metainfos']['image_path']
-
-        if len(chosen_judge) != len([fact for fact in chosen['facts'] if fact != '']):
-            print("chosen facts not match:", chosen_judge, chosen['facts'])
-            continue
-
-        if len(reject_judge) != len([fact for fact in rejected['facts'] if fact != '']):
-            print("rejected facts not match:", reject_judge, rejected['facts'])
-            continue
-
         metainfos = {
             'ds_question_id': ds_question_id,
-            "reference": chosen['metainfos']['reference'] if 'reference' in chosen['metainfos'] else '',
-            "origin_file": chosen['metainfos']['origin_file'] if 'origin_file' in chosen['metainfos'] else '',
-            "chosen_infos": {key: chosen[key] for key in chosen if key in ['facts', 'changed_facts']},
-            "rejected_infos": {key: rejected[key] for key in rejected if key in ['facts', 'changed_facts']},
-            "scores": {'chosen': {'judge': chosen_judge, 'score': str(chosen_score)},
-                       'rejected': {'judge': reject_judge, 'score': str(reject_score)}},
+            "reference": chosen['metainfos'].get('reference', ''),
+            "origin_file": chosen['metainfos'].get('origin_file', ''),
+            "chosen_infos": {k: chosen[k] for k in chosen if k in ['sub_sents']},
+            "rejected_infos": {k: rejected[k] for k in rejected if k in ['sub_sents']},
+            "scores": {'chosen': {'score': str(chosen_score)},
+                       'rejected': {'score': str(reject_score)}},
         }
 
         new_item = {
