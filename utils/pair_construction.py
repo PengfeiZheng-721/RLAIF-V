@@ -94,15 +94,16 @@ def get_pairs_inner(pred_data_addscores, diff=1, return_infos=False):
         return pred_addcls
 
     def get_pred_ans_scores(pred_addcls):
-        pred_quesid_to_fact_label_list = defaultdict(list)
+        pred_quesid_to_yesprob_list = defaultdict(list)
         pred_quesid_to_judge = defaultdict(dict)
         for item in pred_addcls:
             question_id = item['question_id']
-            pred_quesid_to_fact_label_list[question_id].append(item['pred_label'])
+            yes_prob = func_yes_prob(item['scores'])
+            pred_quesid_to_yesprob_list[question_id].append(yes_prob)
             raw_question = item['raw_question'] if 'raw_question' in item else item['question']
-            pred_quesid_to_judge[question_id][raw_question] = '1' if item['pred_label']==True else '0'
+            pred_quesid_to_judge[question_id][raw_question] = '1' if item['pred_label'] == True else '0'
 
-        pred_quesid_to_scores = {key: sum(value) - len(value) for key, value in pred_quesid_to_fact_label_list.items()}
+        pred_quesid_to_scores = {key: sum(value) / len(value) for key, value in pred_quesid_to_yesprob_list.items()}
 
         return pred_quesid_to_scores, pred_quesid_to_judge
 
