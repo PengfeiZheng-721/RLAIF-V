@@ -36,7 +36,7 @@ def filter_same_instruct(org_data, autocheck_data):
 def save_pred_quesid_to_judge(pred_quesid_to_judge, origin_divide_data, save_path):
     new_data = []
     for item in origin_divide_data:
-        item['fact_judge'] = pred_quesid_to_judge[item['question_id']]
+        item['sub_sent_judge'] = pred_quesid_to_judge[item['question_id']]
         new_data.append(item)
 
     write_jsonlines(save_path, new_data)
@@ -47,7 +47,7 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         data = read_json(path_autocheck)
     except:
         data = read_jsonlines(path_autocheck)
-    print("origin facts len:", len(data))
+    print("origin sub_sents len:", len(data))
 
 
     try:
@@ -108,20 +108,20 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         image_path = chosen['metainfos']['image_path']
         assert chosen['metainfos']['image_path'] == rejected['metainfos']['image_path']
 
-        if len(chosen_judge) != len([fact for fact in chosen['facts'] if fact != '']):
-            print("chosen facts not match:", chosen_judge, chosen['facts'])
+        if len(chosen_judge) != len([sub for sub in chosen['sub_sents'] if sub != '']):
+            print("chosen sub_sents not match:", chosen_judge, chosen['sub_sents'])
             continue
 
-        if len(reject_judge) != len([fact for fact in rejected['facts'] if fact != '']):
-            print("rejected facts not match:", reject_judge, rejected['facts'])
+        if len(reject_judge) != len([sub for sub in rejected['sub_sents'] if sub != '']):
+            print("rejected sub_sents not match:", reject_judge, rejected['sub_sents'])
             continue
 
         metainfos = {
             'ds_question_id': ds_question_id,
             "reference": chosen['metainfos']['reference'] if 'reference' in chosen['metainfos'] else '',
             "origin_file": chosen['metainfos']['origin_file'] if 'origin_file' in chosen['metainfos'] else '',
-            "chosen_infos": {key: chosen[key] for key in chosen if key in ['facts', 'changed_facts']},
-            "rejected_infos": {key: rejected[key] for key in rejected if key in ['facts', 'changed_facts']},
+            "chosen_infos": {key: chosen[key] for key in chosen if key in ['sub_sents', 'changed_sub_sents']},
+            "rejected_infos": {key: rejected[key] for key in rejected if key in ['sub_sents', 'changed_sub_sents']},
             "scores": {'chosen': {'judge': chosen_judge, 'score': str(chosen_score)},
                        'rejected': {'judge': reject_judge, 'score': str(reject_score)}},
         }
@@ -147,7 +147,7 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
     write_jsonlines(save_path, pair_data)
 
     write_jsonlines(save_path.replace('.jsonl', '.addcls.jsonl'), pred_addcls)
-    save_pred_quesid_to_judge(pred_quesid_to_judge, origin_divide_data, save_path.replace('.jsonl', '.addfactjudge.jsonl'))
+    save_pred_quesid_to_judge(pred_quesid_to_judge, origin_divide_data, save_path.replace('.jsonl', '.addsubsentjudge.jsonl'))
 
     return pair_data
 
