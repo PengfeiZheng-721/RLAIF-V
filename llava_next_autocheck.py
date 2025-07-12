@@ -25,7 +25,11 @@ def main():
     length = None
     if args.end_pos != -1:
         length = args.end_pos - args.start_pos
-    data = read_jsonlines(args.ds_name, args.start_pos, length)
+
+    if length is not None:
+        data = read_jsonlines(args.ds_name, args.start_pos, length)
+    else:
+        data = read_jsonlines(args.ds_name, args.start_pos)
 
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     model = AutoModelForCausalLM.from_pretrained(args.checkpoint, device_map='auto')

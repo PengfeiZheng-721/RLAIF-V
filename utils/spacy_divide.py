@@ -19,7 +19,11 @@ def main():
     length = None
     if args.end != -1:
         length = args.end - args.start
-    data = read_jsonlines(args.input, args.start, length)
+
+    if length is not None:
+        data = read_jsonlines(args.input, args.start, length)
+    else:
+        data = read_jsonlines(args.input, args.start)
     for item in data:
         item["sub_sents"] = get_sub_clauses(item.get("answer", ""))
     write_jsonlines(args.output, data)
