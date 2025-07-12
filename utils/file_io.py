@@ -1,5 +1,6 @@
 import json
 import jsonlines
+from typing import Optional
 
 def write_jsonlines(file: str, dataset: list):
     with jsonlines.open(file, 'w') as writer:
@@ -16,7 +17,7 @@ def read_json(path):
 
     return data
 
-def read_jsonlines(file: str, index_begin: int = 0, index_all: int = -1):
+def read_jsonlines(file: str, index_begin: int = 0, index_all: Optional[int] = -1):
     """Read a jsonlines file with optional start and end indices.
 
     Parameters
@@ -28,6 +29,9 @@ def read_jsonlines(file: str, index_begin: int = 0, index_all: int = -1):
     index_all : int, optional
         The number of records to read. ``-1`` means reading to the end.
     """
+
+    if index_all is None:
+        index_all = -1
 
     dataset = []
     with jsonlines.open(file, 'r') as reader:
