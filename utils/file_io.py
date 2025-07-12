@@ -16,18 +16,31 @@ def read_json(path):
 
     return data
 
-def read_jsonlines(file: str, index_begin = None, index_all = None):
+def read_jsonlines(file: str, index_begin: int = 0, index_all: int = -1):
+    """Read a jsonlines file with optional start and end indices.
+
+    Parameters
+    ----------
+    file : str
+        Path to the jsonl file.
+    index_begin : int, optional
+        The starting index of the records to read. Defaults to 0.
+    index_all : int, optional
+        The number of records to read. ``-1`` means reading to the end.
+    """
+
     dataset = []
-    if index_begin == None:
-        index_begin = 0
-        index_all = -1
     with jsonlines.open(file, 'r') as reader:
         for data in reader:
-            if index_begin != 0:
+            if index_begin > 0:
                 index_begin -= 1
                 continue
-            dataset += [data]
-            index_all -= 1
-            if index_all == 0:
-                break
+
+            dataset.append(data)
+
+            if index_all > 0:
+                index_all -= 1
+                if index_all == 0:
+                    break
+
     return dataset
