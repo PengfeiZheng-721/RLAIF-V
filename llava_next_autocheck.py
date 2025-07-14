@@ -2,7 +2,7 @@ import argparse
 from tqdm import tqdm
 import torch
 from PIL import Image
-from transformers import AutoTokenizer, CLIPImageProcessor, LlavaNextProcessor, LlavaNextForConditionalGeneration
+from transformers import AutoTokenizer, LlavaNextImageProcessor, LlavaNextProcessor, LlavaNextForConditionalGeneration
 from utils.file_io import read_jsonlines, write_jsonlines
 
 def yes_probability(logits, yes_ids, no_ids):
@@ -31,7 +31,7 @@ def main():
         data = read_jsonlines(args.ds_name, args.start_pos)
 
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
-    image_processor = CLIPImageProcessor.from_pretrained(args.checkpoint)
+    image_processor = LlavaNextImageProcessor.from_pretrained(args.checkpoint)
     processor = LlavaNextProcessor(tokenizer=tokenizer, image_processor=image_processor)
     
     model = LlavaNextForConditionalGeneration.from_pretrained(
@@ -56,16 +56,16 @@ def main():
             print(f"Warning: Image file not found at {image_path}. Skipping.")
             continue
         
-        image_sizes = [image.size]
-
         sub_scores = []
         for sub in item.get('sub_sents', []):
-            prompt_text = f"Based on the image, is the following statement true? Statement: \"{sub}\"\nPlease answer with only 'yes' or 'no'."
+            # --- THIS IS THE FINAL FIX ---
+            # Add the required <image> token to the prompt.
+            prompt_text = f"<image>\nBased on the image, is the following statement true? Statement: \"{sub}\"\nPlease answer with only 'yes' or 'no'."
+            
             inputs = processor(text=prompt_text, images=image, return_tensors='pt').to(model.device)
 
             with torch.no_grad():
-                # This is the line with the correction.
-                output = model.generate(**inputs, image_sizes=image_sizes, max_new_tokens=1, return_dict_in_generate=True, output_scores=True)
+                output = model.generate(**inputs, max_new_tokens=1, return_dict_in_generate=True, output_scores=True)
                 
             logits = output.scores[0][0]
             score = yes_probability(logits, yes_ids, no_ids)
