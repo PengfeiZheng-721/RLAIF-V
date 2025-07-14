@@ -2,13 +2,11 @@
 
 ## step1: diverse gen
 model_path=liuhaotian/llava-v1.5-7b
-ques_dir="/root/autodl-tmp/data/prompts"
-# directory of the input file
-ques_file="rlaifv_full"
-# name of the input file, without '.jsonl'
+ques_dir=./examples # directory of the input file
+ques_file=detail_test_30_input # name of the input file, without '.jsonl'
 ans_dir=./results # directory of the answer files
 start=0
-end=50
+end=-1
 bash ./script/data_gen/llava15/llava15_diverse_gen.sh \
 $model_path \
 $ans_dir \
@@ -16,7 +14,7 @@ $ques_dir \
 ${ques_file}.jsonl \
 $start \
 $end \
-1 # num of gpus that can be used
+8 # num of gpus that can be used
 
 
 # step2: spaCy divide
@@ -25,7 +23,7 @@ bash ./script/data_gen/divide_and_conquer/spacy_divide.sh \
 ${ans_file}.jsonl $start $end
 
 ## step3: LLaVA-NeXT-34B autocheck
-model_path=llava-hf/llava-v1.6-34b-hf
+model_path=openbmb/NeXT-34B
 check_ques_file=diverse_gen_llava15_${start}-${end}_${ques_file}.spacy_divide.jsonl
 bash ./script/data_gen/next34b/next34b_autocheck.sh \
   $model_path $ans_dir $check_ques_file 0 -1 8

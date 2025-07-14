@@ -54,7 +54,6 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
     def get_model(self):
         return self.model
 
-    # THIS IS THE NEW, CORRECTED CODE - USE THIS
     def forward(
         self,
         input_ids: torch.LongTensor = None,
@@ -69,9 +68,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         images: Optional[torch.FloatTensor] = None,
         image_sizes: Optional[List[List[int]]] = None,
         return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None, # <--- 1. ADD THIS LINE
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-    
+
         if inputs_embeds is None:
             (
                 input_ids,
@@ -89,7 +87,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 images,
                 image_sizes
             )
-    
+
         return super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -100,8 +98,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-            cache_position=cache_position, # <--- 2. ADD THIS LINE
+            return_dict=return_dict
         )
 
     @torch.no_grad()

@@ -3,20 +3,13 @@ from itertools import combinations
 from collections import defaultdict
 
 
-# --- CORRECTED FUNCTIONS START ---
 def func_yes_prob(item_scores):
-    # item_scores is a list of floats, so we average them.
-    if not item_scores:
-        return 0.0
-    return sum(item_scores) / len(item_scores)
+    yes_prob = item_scores['yes'] + item_scores['Yes']
+    return yes_prob
 
 def func_no_prob(item_scores):
-    # The "no" probability is 1 minus the average "yes" probability.
-    if not item_scores:
-        return 1.0
-    avg_yes_prob = sum(item_scores) / len(item_scores)
-    return 1.0 - avg_yes_prob
-# --- CORRECTED FUNCTIONS END ---
+    no_prob = item_scores['no'] + item_scores['No']
+    return no_prob
 
 
 def get_pred_scores(pred_data_addscores, func):
@@ -29,15 +22,14 @@ def get_pred_scores(pred_data_addscores, func):
 def get_dsid_to_question_id(pred):
     dsid_to_question_ids = defaultdict(list)
     for item in pred:
-        # Using .get() for safety in case a key is missing
-        ds_id = item.get('metainfos', {}).get('ds_question_id') or item.get('ds_question_id')
-        ques = item.get('metainfos', {}).get('metainfos', {}).get('origin_question')
-        if ds_id is None or ques is None:
-            continue
+        ds_id = item['metainfos']['ds_question_id'] if 'ds_question_id' in item['metainfos'] else item['ds_question_id']
+        ques = item['metainfos']['metainfos']['origin_question']
         key = f'{ds_id}@{ques}'
         dsid_to_question_ids[key].append(item['question_id'])
 
     dsid_to_question_ids = {key: list(set(value)) for key, value in dsid_to_question_ids.items()}
+    # print("dsid_to_question_ids:", list(dsid_to_question_ids.keys())[:10])
+    # print("dsid_to_question_ids len:", len(dsid_to_question_ids))
     return dsid_to_question_ids
 
 

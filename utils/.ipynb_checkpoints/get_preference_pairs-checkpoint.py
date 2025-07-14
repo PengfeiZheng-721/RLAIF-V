@@ -6,15 +6,12 @@ from pair_construction import get_pairs_inner
 from file_io import read_jsonlines, read_json, write_jsonlines
 
 
-# THIS IS THE NEW, CORRECTED CODE - USE THIS
 def filter_same_instruct(org_data, autocheck_data):
-    # Use 'question_id' which is standard in the rest of the script
-    used_imgpath = [f"{org_data[0]['question_id']}@{org_data[0]['raw_question']}"]
+    used_imgpath = [f"{org_data[0]['ds_question_id']}@{org_data[0]['raw_question']}"]
     new_data = []
-    curr_img = f"{org_data[0]['question_id']}@{org_data[0]['raw_question']}"
+    curr_img = f"{org_data[0]['ds_question_id']}@{org_data[0]['raw_question']}"
     for item in org_data:
-        # Use 'question_id' here as well
-        temp_key = f"{item['question_id']}@{item['raw_question']}"
+        temp_key = f"{item['ds_question_id']}@{item['raw_question']}"
         if temp_key == curr_img:
             new_data.append(item)
         else:
@@ -65,8 +62,7 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
 
 
     question_id_2_origin_data = {item['question_id']: item for item in origin_divide_data}
-    # This assertion is logically incorrect for this pipeline, so we disable it.
-    # assert len(question_id_2_origin_data) == len(origin_divide_data), f'{len(question_id_2_origin_data)},{len(origin_divide_data)}'
+    assert len(question_id_2_origin_data) == len(origin_divide_data), f'{len(question_id_2_origin_data)},{len(origin_divide_data)}'
 
     ### pair data format
     # chosen_pair_data = {
@@ -134,12 +130,8 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         pair_data.append(new_item)
 
     print("pair data:", len(pair_data))
-    if len(pair_data) > 0:
-        print("chosen avg len:", ch_len / len(pair_data))
-        print("rejected avg len:", rej_len / len(pair_data))
-    else:
-        print("chosen avg len: 0")
-        print("rejected avg len: 0")
+    print("chosen avg len:", ch_len / len(pair_data))
+    print("rejected avg len:", rej_len / len(pair_data))
 
     # print(pair_data[0])
 

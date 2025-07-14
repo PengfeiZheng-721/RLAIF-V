@@ -20,7 +20,7 @@ end_pos=$6
 
 echo "start pos "$start_pos" end pos "$end_pos
 
-num_gpus=1
+num_gpus=$7
 
 torchrun --nnodes=1 --nproc_per_node=${num_gpus} --rdzv_id=1 --rdzv_backend=c10d --rdzv_endpoint=localhost:0 ./muffin/llava15_gen_data.py \
 --checkpoint $ckpt \
@@ -29,7 +29,7 @@ torchrun --nnodes=1 --nproc_per_node=${num_gpus} --rdzv_id=1 --rdzv_backend=c10d
 --max_sample -1 \
 --start_pos $start_pos \
 --end_pos $end_pos \
---repeat 2 \
+--repeat 10 \
 --max_tokens 512 \
 --num-workers 5 \
 --batch-size 8 \

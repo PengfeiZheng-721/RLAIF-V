@@ -111,53 +111,40 @@ class GenDataset(torch_data.Dataset):
         self.start_idx = repeat_time * start
 
     def __getitem__(self, index):
-            item = self.qa_data[index]
-    
-            # --- START: CORRECTED PATH AND KEY HANDLING ---
-    
-            # 1. Define the absolute base directory for your images
-            base_dir = "/root/autodl-tmp/"
-            
-            # 2. Get the relative path from the correct "image" key
-            relative_image_path = item.get("image")
-            
-            # Initialize variables
-            image = None
-            absolute_image_path = None
-    
-            if relative_image_path:
-                # 3. Construct the absolute path
-                absolute_image_path = os.path.join(base_dir, relative_image_path)
-                try:
-                    # Load the image using the absolute path
-                    image = Image.open(absolute_image_path).convert('RGB')
-                except FileNotFoundError:
-                    print(f"ERROR: Image not found at constructed path: {absolute_image_path}")
-                    # Create a blank image as a placeholder to avoid crashing
-                    image = Image.new('RGB', (224, 224), (255, 255, 255))
+        item = self.qa_data[index]
+        if "image_id" in item.keys():
+            imgid = item["image_id"]
+
+        # print(item.keys())
+        if "image" in item.keys():
+            img_b64 = item['image']
+
+            if len(img_b64) > 100:
+                image = Image.open(io.BytesIO(base64.b64decode(img_b64))).convert('RGB')
             else:
-                print(f"Warning: 'image' key not found for item at index {index}")
-                image = Image.new('RGB', (224, 224), (255, 255, 255))
-    
-            # 4. Create a clean metainfos dictionary for output with the correct key and absolute path
-            metainfo = {"image_path": absolute_image_path}
-            
-            # --- END: CORRECTED PATH AND KEY HANDLING ---
-    
-            # Use the correct key "question" from your file
-            raw_question = item.get('question', '')
-    
-            question_input_ids = self.question_process(raw_question)
-            
-            return {
-                # Use the correct key "id" from your file for the question_id
-                'question_id': item.get('id'),
-                'image': image,
-                'question_input_ids': question_input_ids,
-                'raw_question': raw_question,
-                'metainfos': metainfo,
-                'origin_dataset': self.qa_file
-            }
+                image = Image.open(img_b64).convert('RGB')
+        elif "image_path" in item.keys():
+            # print("in")
+            image = Image.open(item['image_path']).convert('RGB')
+        elif "image_path" in item['metainfos'].keys():
+            # print("in metainfos")
+            image = Image.open(item['metainfos']['image_path']).convert('RGB')
+
+        metainfo = {key:value for key,value in item.items() if key not in ["image_id", "question", "image"]}
+
+        raw_question = item['question']
+
+        question_input_ids = self.question_process(raw_question)
+        # print("question_input_ids:", question_input_ids)
+
+        return {
+            'question_id': item['question_id'] if 'question_id' in item else self.start_idx+index,
+            'image': image,
+            'question_input_ids': question_input_ids,
+            'raw_question': raw_question,
+            'metainfos': metainfo,
+            'origin_dataset': self.qa_file
+        }
 
     def __len__(self):
         return len(self.qa_data)
