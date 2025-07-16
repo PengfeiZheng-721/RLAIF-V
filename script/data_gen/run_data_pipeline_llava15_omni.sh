@@ -8,7 +8,7 @@ ques_file="rlaifv_full"
 # name of the input file, without '.jsonl'
 ans_dir=./results # directory of the answer files
 start=0
-end=-1
+end=50
 bash ./script/data_gen/llava15/llava15_diverse_gen.sh \
 $model_path \
 $ans_dir \

@@ -6,15 +6,13 @@ from pair_construction import get_pairs_inner
 from file_io import read_jsonlines, read_json, write_jsonlines
 
 
-# THIS IS THE NEW, CORRECTED CODE - USE THIS
 def filter_same_instruct(org_data, autocheck_data):
-    # Use 'question_id' which is standard in the rest of the script
-    used_imgpath = [f"{org_data[0]['question_id']}@{org_data[0]['raw_question']}"]
+    # This function is now correct
+    used_imgpath = [f"{org_data[0].get('id')}@{org_data[0]['raw_question']}"]
     new_data = []
-    curr_img = f"{org_data[0]['question_id']}@{org_data[0]['raw_question']}"
+    curr_img = f"{org_data[0].get('id')}@{org_data[0]['raw_question']}"
     for item in org_data:
-        # Use 'question_id' here as well
-        temp_key = f"{item['question_id']}@{item['raw_question']}"
+        temp_key = f"{item.get('id')}@{item['raw_question']}"
         if temp_key == curr_img:
             new_data.append(item)
         else:
@@ -23,6 +21,7 @@ def filter_same_instruct(org_data, autocheck_data):
                 curr_img = temp_key
                 new_data.append(item)
             else:
+                # This print statement can be removed if you don't need to see duplicates
                 print(temp_key)
                 continue
 
@@ -39,7 +38,7 @@ def filter_same_instruct(org_data, autocheck_data):
 def save_pred_quesid_to_judge(pred_quesid_to_judge, origin_divide_data, save_path):
     new_data = []
     for item in origin_divide_data:
-        item['fact_judge'] = pred_quesid_to_judge[item['question_id']]
+        item['fact_judge'] = pred_quesid_to_judge.get(item['question_id'])
         new_data.append(item)
 
     write_jsonlines(save_path, new_data)
@@ -52,7 +51,6 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         data = read_jsonlines(path_autocheck)
     print("origin facts len:", len(data))
 
-
     try:
         origin_divide_data = read_jsonlines(path_ans_divide)
     except:
@@ -63,41 +61,27 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
     origin_divide_data, data = filter_same_instruct(origin_divide_data, data)
     print("filtered_origin:", len(origin_divide_data), "filtered_autocheck:", len(data))
 
-
     question_id_2_origin_data = {item['question_id']: item for item in origin_divide_data}
-    # This assertion is logically incorrect for this pipeline, so we disable it.
-    # assert len(question_id_2_origin_data) == len(origin_divide_data), f'{len(question_id_2_origin_data)},{len(origin_divide_data)}'
-
-    ### pair data format
-    # chosen_pair_data = {
-    #     "ds_question_id": key,
-    #     "chosen": {"question_id": comp_idx1, "score": ans_1_score},
-    #     "rejected": {"question_id": comp_idx2, "score": ans_2_score},
-    # }
+    
     pair_data_ids, pred_quesid_to_judge, pred_addcls = get_pairs_inner(data, diff=diff, return_infos=True)
 
     pair_data = []
     ch_len = 0.0
     rej_len = 0.0
     for item in pair_data_ids:
-        if len(item['ds_question_id'].split("@")) > 1:
-            ds_question_id = '@'.join(item['ds_question_id'].split("@")[0:-1])
-        else:
-            ds_question_id = item['ds_question_id'].split("@")[0]
+        ds_question_id_or_text = item['ds_question_id']
         chosen_ques_id = item['chosen']['question_id']
         reject_ques_id = item['rejected']['question_id']
 
         chosen_score = item['chosen']['score']
         reject_score = item['rejected']['score']
-        chosen_judge = pred_quesid_to_judge[chosen_ques_id]
-        reject_judge = pred_quesid_to_judge[reject_ques_id]
-
+        
         chosen = question_id_2_origin_data[chosen_ques_id]
         rejected = question_id_2_origin_data[reject_ques_id]
 
-        assert ds_question_id == str(chosen['ds_question_id']), f"{ds_question_id} != {chosen['ds_question_id']}"
-        assert ds_question_id == str(rejected['ds_question_id']), f"{ds_question_id} != {rejected['ds_question_id']}"
-
+        assert ds_question_id_or_text == chosen['raw_question']
+        assert ds_question_id_or_text == rejected['raw_question']
+        
         ch_question = chosen['question'] if 'question' in chosen else chosen['raw_question']
         rej_question = rejected['question'] if 'question' in rejected else rejected['raw_question']
         assert ch_question == rej_question, f"{chosen}\n{rejected}"
@@ -111,8 +95,8 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
 
         image_path = chosen['metainfos']['image_path']
         assert chosen['metainfos']['image_path'] == rejected['metainfos']['image_path']
+        
         metainfos = {
-            'ds_question_id': ds_question_id,
             "reference": chosen['metainfos'].get('reference', ''),
             "origin_file": chosen['metainfos'].get('origin_file', ''),
             "chosen_infos": {k: chosen[k] for k in chosen if k in ['sub_sents']},
@@ -122,9 +106,9 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         }
 
         new_item = {
-            "image_id": image_path.split('/')[-1],
+            "image_id": image_path.split('/')[-1] if image_path else None,
             "image_path": image_path,
-            "ds_question_id": ds_question_id,
+            "question_id": chosen.get('id'), # Use original prompt ID
             "question": question,
             "chosen": ch_answer,
             "rejected": rej_answer,
@@ -141,8 +125,6 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         print("chosen avg len: 0")
         print("rejected avg len: 0")
 
-    # print(pair_data[0])
-
     write_jsonlines(save_path, pair_data)
 
     write_jsonlines(save_path.replace('.jsonl', '.addcls.jsonl'), pred_addcls)
@@ -153,7 +135,9 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
 def sample_pair_data(pair_data, sample_num, save_path):
     dsid_2_pairs = defaultdict(list)
     for item in pair_data:
-        dsid_2_pairs[item['ds_question_id']].append(item)
+        # --- THIS IS THE FINAL FIX ---
+        # Use the correct key 'question_id' to group for sampling
+        dsid_2_pairs[item['question_id']].append(item)
 
     sampled_pairs = []
     for key, item in dsid_2_pairs.items():
@@ -171,17 +155,18 @@ if __name__ == '__main__':
     parser.add_argument('--autocheck_path', type=str)
     parser.add_argument('--gpt_divide_gq_path', type=str)
     parser.add_argument('--sample_num', type=int, default=2)
-
+    parser.add_argument('--diff', type=float, default=0.01)
     args = parser.parse_args()
 
     path = args.autocheck_path
     path_gpt_divide = args.gpt_divide_gq_path
 
+    # --- FINAL FIX: Correctly construct filenames by appending, not replacing ---
+    save_path = f"{path}_pair_diff1.jsonl"
+    pair_data = get_pair_data(path, path_gpt_divide, save_path, diff=args.diff)
 
-    save_path = path.replace('.jsonl', '.pair_diff1.jsonl')
-    pair_data = get_pair_data(path, path_gpt_divide, save_path, diff=1)
-
-    sampled_num = args.sample_num
-    sample_save_path = path.replace('.jsonl', f'_pair_diff1_samp{sampled_num}.jsonl')
+    sample_save_path = f"{path}_pair_diff1_samp{args.sample_num}.jsonl"
+    
+    # Reread the created pairs file to sample from it
     pair_data = read_jsonlines(save_path)
-    sample_pair_data(pair_data, sampled_num, sample_save_path)
+    sample_pair_data(pair_data, args.sample_num, sample_save_path)

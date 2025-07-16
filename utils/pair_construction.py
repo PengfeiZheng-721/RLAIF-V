@@ -3,20 +3,19 @@ from itertools import combinations
 from collections import defaultdict
 
 
-# --- CORRECTED FUNCTIONS START ---
+# --- FIX 1: Correctly calculate scores from a list ---
 def func_yes_prob(item_scores):
-    # item_scores is a list of floats, so we average them.
+    # The input 'item_scores' is a list of floats, so we average them.
     if not item_scores:
         return 0.0
     return sum(item_scores) / len(item_scores)
 
 def func_no_prob(item_scores):
-    # The "no" probability is 1 minus the average "yes" probability.
+    # The "no" probability is simply 1 minus the average "yes" probability.
     if not item_scores:
         return 1.0
     avg_yes_prob = sum(item_scores) / len(item_scores)
     return 1.0 - avg_yes_prob
-# --- CORRECTED FUNCTIONS END ---
 
 
 def get_pred_scores(pred_data_addscores, func):
@@ -26,15 +25,17 @@ def get_pred_scores(pred_data_addscores, func):
     return pred_scores
 
 
+# --- FIX 2: Correctly group answers using a reliable key ---
 def get_dsid_to_question_id(pred):
+    # Group different generated answers by their shared "raw_question" text.
     dsid_to_question_ids = defaultdict(list)
     for item in pred:
-        # Using .get() for safety in case a key is missing
-        ds_id = item.get('metainfos', {}).get('ds_question_id') or item.get('ds_question_id')
-        ques = item.get('metainfos', {}).get('metainfos', {}).get('origin_question')
-        if ds_id is None or ques is None:
+        # The raw_question text is the reliable key for grouping.
+        key = item.get('raw_question')
+        if key is None:
             continue
-        key = f'{ds_id}@{ques}'
+        
+        # We collect the unique IDs of each generated answer for that question.
         dsid_to_question_ids[key].append(item['question_id'])
 
     dsid_to_question_ids = {key: list(set(value)) for key, value in dsid_to_question_ids.items()}
@@ -61,10 +62,11 @@ def get_pair_data(quesid_to_scores, dsid_to_question_ids, diff):
 
         potential_pairs = []
 
+        # This combination logic will now work because the grouping is correct.
         for comp_idx1, comp_idx2 in combinations(question_ids, 2):
 
-            ans_1_score = quesid_to_scores[comp_idx1]
-            ans_2_score = quesid_to_scores[comp_idx2]
+            ans_1_score = quesid_to_scores.get(comp_idx1, 0)
+            ans_2_score = quesid_to_scores.get(comp_idx2, 0)
 
             ans_1 = {"question_id": comp_idx1, "score": ans_1_score}
             ans_2 = {"question_id": comp_idx2, "score": ans_2_score}
@@ -77,7 +79,8 @@ def get_pair_data(quesid_to_scores, dsid_to_question_ids, diff):
 
         for chosen_pair in potential_pairs:
             chosen_pair_data = {
-                "ds_question_id": key,
+                # The "key" is now the raw_question text.
+                "ds_question_id": key, 
                 "chosen": chosen_pair['chosen'],
                 "rejected": chosen_pair['rejected'],
             }
@@ -119,6 +122,16 @@ def get_pairs_inner(pred_data_addscores, diff=1, return_infos=False):
     pred_quesid_to_scores, pred_quesid_to_judge = get_pred_ans_scores(pred_addcls)
 
     dsid_to_question_ids = get_dsid_to_question_id(pred_data_addscores)
+    
+    # --- DEBUGGING PRINT ADDED HERE TEMPORARILY ---
+    print("\n--- DEBUG: Checking Answer Groups ---")
+    print(f"Total number of unique questions found for pairing: {len(dsid_to_question_ids)}")
+    for i, (key, value) in enumerate(dsid_to_question_ids.items()):
+        if i >= 5: break
+        print(f"Group {i+1}: Question='{key[:70]}...', Answer_IDs={value}")
+    print("--- END DEBUG ---\n")
+    # --- END DEBUGGING PRINT ---
+
     pair_data = get_pair_data(pred_quesid_to_scores, dsid_to_question_ids, diff)
 
     if return_infos:

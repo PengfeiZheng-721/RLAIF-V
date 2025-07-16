@@ -8,11 +8,6 @@ def filter_pair_by_len(all_pairs_dicts, diff_len):
     for pair in all_pairs_dicts:
         chosen_len = len(pair['chosen'].split())
         reject_len = len(pair['rejected'].split())
-        
-        # Avoid division by zero if reject_len is 0
-        if reject_len == 0:
-            continue
-            
         pair_diff_len = (reject_len - chosen_len)/float(reject_len)
         if pair_diff_len > diff_len:
             continue
@@ -25,20 +20,17 @@ def filter_pair_by_len(all_pairs_dicts, diff_len):
 
     return remain_pair
 
-# --- THIS FUNCTION HAS BEEN CORRECTED ---
 def cal_pair_statistics(all_pairs):
     avg_win_len = 0.0
     avg_lose_len = 0.0
     shorten_cnt = 0
     longer_cnt = 0
 
-    total = len(all_pairs)
+    total = 0
 
-    # --- FIX: Add a safety check for an empty list ---
-    if total == 0:
-        return 0.0, 0.0, 0, 0
+    for i in range(len(all_pairs)):
+        data = all_pairs[i]
 
-    for data in all_pairs:
         avg_win_len += len(data['chosen'].split())
         avg_lose_len += len(data['rejected'].split())
 
@@ -47,9 +39,12 @@ def cal_pair_statistics(all_pairs):
         elif len(data['chosen'].split()) < len(data['rejected'].split()):
             shorten_cnt += 1
 
+        total += 1
+
     avg_win_len /= total
     avg_lose_len /= total
-    # Return portions as a count/total, not a pre-divided float
+    shorten_cnt /= total
+    longer_cnt /= total
     return avg_win_len, avg_lose_len, shorten_cnt, longer_cnt
 
 def cal_pair_search_difflen(wanted_pairs_dicts, use_len=True):
@@ -58,65 +53,52 @@ def cal_pair_search_difflen(wanted_pairs_dicts, use_len=True):
     results = []
     for ratio in shorten_ratios:
         remain_pairs = filter_pair_by_len(wanted_pairs_dicts, ratio)
+        # print("filtered short:", len(remain_pairs))
         avg_win_len, avg_lose_len, shorten_cnt, longer_cnt = cal_pair_statistics(remain_pairs)
-        
-        total_pairs = len(remain_pairs)
-        if total_pairs == 0:
-            shorten_portion = 0
-            longer_portion = 0
-        else:
-            shorten_portion = shorten_cnt / total_pairs
-            longer_portion = longer_cnt / total_pairs
 
-        avg_diff_len_portion = abs(avg_win_len - avg_lose_len) / avg_lose_len if avg_lose_len > 0 else 0
-        diff_shorter_longer_portion = abs(shorten_portion - longer_portion)
-
+        avg_diff_len = abs(avg_win_len - avg_lose_len) / avg_lose_len
+        diff_shorter_longer_portion = abs(shorten_cnt - longer_cnt)
         results.append({
             'ratio': ratio,
             'avg_win_len': avg_win_len,
             'avg_lose_len': avg_lose_len,
-            'shorten_portion': shorten_portion,
-            'longer_portion': longer_portion,
+            'shorten_portion': shorten_cnt,
+            'longer_portion': longer_cnt,
             'avg_diff_len': abs(avg_win_len - avg_lose_len),
-            'avg_diff_len_portion': avg_diff_len_portion,
+            'avg_diff_len_portion': avg_diff_len,
             'diff_shorter_longer_portion': diff_shorter_longer_portion,
-            'total_diff_portion': avg_diff_len_portion if use_len else diff_shorter_longer_portion
+            'total_diff_portion': avg_diff_len if use_len else diff_shorter_longer_portion  # + diff_shorter_longer_portion
         })
 
-    if not results:
-        print("Warning: No results generated after searching ratios. Cannot find optimal pair set.")
-        return [], 0, pd.Series(), pd.DataFrame()
-
     df = pd.DataFrame(results)
+    # print(df)
+
     idmin = df['total_diff_portion'].idxmin()
-    min_row = df.iloc[idmin]
-    
-    final_remain_pairs = filter_pair_by_len(wanted_pairs_dicts, min_row['ratio'])
-    return final_remain_pairs, min_row['ratio'], min_row, df
+    # print(df.iloc[idmin])
+
+    final_remain_pairs = filter_pair_by_len(wanted_pairs_dicts, df.iloc[idmin]['ratio'])
+    return final_remain_pairs, df.iloc[idmin]['ratio'], df.iloc[idmin], df
 
 def main_filter_shorten(path, save_path, use_len=True):
     all_pairs_dicts = read_jsonlines(path)
-    if not all_pairs_dicts:
-        print("Warning: Input pair file is empty. No filtering will be done.")
-        write_jsonlines(save_path, [])
-        return
-        
     final_remain_pairs, ratio, df_min, df = cal_pair_search_difflen(all_pairs_dicts, use_len=use_len)
-    print("Optimal ratio found:", ratio)
-    print("Statistics at optimal ratio:\n", df_min)
+    print(ratio)
+    print(df_min)
     write_jsonlines(save_path, final_remain_pairs)
-    
-    # Check if df and df_min are not empty before saving
-    if not df.empty:
-        df.to_excel(save_path.replace('.jsonl', '_search_diff.xlsx'))
-    if not df_min.empty:
-        df_min.to_excel(save_path.replace('.jsonl', '_search_min_diff_statistics.xlsx'))
-
+    df_min.to_excel(save_path.replace('.jsonl', '_search_min_diff_statistics.xlsx'))
+    df.to_excel(save_path.replace('.jsonl', '_search_diff.xlsx'))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, required=True)
-    parser.add_argument('--save_path', type=str, required=True)
+    parser.add_argument('--path', type=str)
+    parser.add_argument('--save_path', type=str)
+
     args = parser.parse_args()
 
-    main_filter_shorten(args.path, args.save_path)
+    path = args.path
+    save_path = args.save_path
+
+    main_filter_shorten(
+        path,
+        save_path
+    )

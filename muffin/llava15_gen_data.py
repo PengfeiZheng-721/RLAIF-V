@@ -113,50 +113,46 @@ class GenDataset(torch_data.Dataset):
     def __getitem__(self, index):
             item = self.qa_data[index]
     
-            # --- START: CORRECTED PATH AND KEY HANDLING ---
-    
-            # 1. Define the absolute base directory for your images
+            # --- CORRECTED PATH AND KEY HANDLING ---
             base_dir = "/root/autodl-tmp/"
-            
-            # 2. Get the relative path from the correct "image" key
             relative_image_path = item.get("image")
             
-            # Initialize variables
             image = None
             absolute_image_path = None
     
             if relative_image_path:
-                # 3. Construct the absolute path
                 absolute_image_path = os.path.join(base_dir, relative_image_path)
                 try:
-                    # Load the image using the absolute path
                     image = Image.open(absolute_image_path).convert('RGB')
                 except FileNotFoundError:
                     print(f"ERROR: Image not found at constructed path: {absolute_image_path}")
-                    # Create a blank image as a placeholder to avoid crashing
                     image = Image.new('RGB', (224, 224), (255, 255, 255))
             else:
                 print(f"Warning: 'image' key not found for item at index {index}")
                 image = Image.new('RGB', (224, 224), (255, 255, 255))
     
-            # 4. Create a clean metainfos dictionary for output with the correct key and absolute path
+            # Create a clean metainfos dictionary for output
             metainfo = {"image_path": absolute_image_path}
             
-            # --- END: CORRECTED PATH AND KEY HANDLING ---
-    
-            # Use the correct key "question" from your file
             raw_question = item.get('question', '')
-    
             question_input_ids = self.question_process(raw_question)
             
+            # --- THIS IS THE FINAL FIX ---
+            # Get the original ID from the input file
+            original_id = item.get('id')
+            # Create a new, TRULY UNIQUE ID by combining the original ID with the dataset index
+            unique_question_id = f"{original_id}_{index}"
+    
             return {
-                # Use the correct key "id" from your file for the question_id
-                'question_id': item.get('id'),
+                # Use the new unique ID for this specific generated answer
+                'question_id': unique_question_id,
                 'image': image,
                 'question_input_ids': question_input_ids,
                 'raw_question': raw_question,
                 'metainfos': metainfo,
-                'origin_dataset': self.qa_file
+                'origin_dataset': self.qa_file,
+                # We also pass along the original ID for potential grouping later
+                'original_id': original_id
             }
 
     def __len__(self):
