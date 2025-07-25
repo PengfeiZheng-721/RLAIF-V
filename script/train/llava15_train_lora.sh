@@ -7,6 +7,7 @@ deepspeed ./muffin/train/train_llava15_lora.py \
     --deepspeed ./script/zero2.json  \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
     --data_dir ./RLAIF-V-Dataset_logps/ \
+    # --jsonl_file your_data.jsonl \
     --image_folder not_used \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_use_im_start_end False \
