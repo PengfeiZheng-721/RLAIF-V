@@ -71,6 +71,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 ## Dataset
 
 We present the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains **83,132 high-quality comparison pairs**. The dataset contains the generated preference pairs in each training iteration of different models, including LLaVA 1.5 7B, OmniLMM 12B and MiniCPM-V.
+You can also train with your own jsonl file by providing it to `RLAIFVDataset` through the `--jsonl_file` argument.
 
 ## Install
 
@@ -180,7 +181,8 @@ bash ./script/data_gen/run_data_pipeline_llava15_minicpmv.sh
 
 If you can access huggingface dataset, you can skip this step, we will automatically download the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset).
 
-If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset' to your dataset path [here](muffin/data/datasets.py#L38) at Line 38.
+If you already downloaded the dataset, you can replace `openbmb/RLAIF-V-Dataset` with your local dataset path in `muffin/data/datasets.py`.
+If you have your own jsonl preference data, pass the file path to `--jsonl_file` when running the training script. Log probabilities will be computed automatically.
 
 2. Training
 
@@ -207,10 +209,10 @@ bash ./script/train/llava15_train_lora.sh
 To reproduce the iterative training process in the paper, you need to do the following steps for 4 times:
 - **S1. Data generation.**
 
-  Follow the instructions in [data generation](https://github.com/RLHF-V/RLAIF-V?tab=readme-ov-file#data-generation) to generate preference pairs for the base model. Convert the generated jsonl file to huggingface parquet.
+  Follow the instructions in [data generation](https://github.com/RLHF-V/RLAIF-V?tab=readme-ov-file#data-generation) to generate preference pairs for the base model. The resulting jsonl file can be directly used with `--jsonl_file`.
 - **S2. Change training config.**
 
-  In dataset code, replace `'openbmb/RLAIF-V-Dataset'` [here](muffin/data/datasets.py#L38) to your data path.
+  In the dataset code, replace `openbmb/RLAIF-V-Dataset` with your local dataset path if needed.
 
   In [training script](script/train/llava15_train.sh), replace `--data_dir` with a new directory, replace `--model_name_or_path` with the base model path, set `--max_step` to the number of steps for 4 epoch, set `--save_steps` to the number of steps for 1/4 epoch.
 - **S3. Do DPO training.**

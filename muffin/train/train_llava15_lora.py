@@ -68,6 +68,7 @@ class DataArguments:
     data_source_weights: str = '100'
     eval_data_source_names: Optional[str] = field(default=None)
     data_dir: str = './RLAIF-V-Dataset/'
+    jsonl_file: Optional[str] = None
     kto_win_data_source_names: str = '100'
     kto_win_data_source_weights: str = '100'
     kto_rej_data_source_names : str = '100'
@@ -211,11 +212,21 @@ class DPODataset(Dataset):
                  tokenizer: transformers.PreTrainedTokenizer,
                  data_dir: str,
                  multimodal_cfg: dict,
-                 reference_model = None):
+                 reference_model = None,
+                 jsonl_file: str = None):
         super(DPODataset, self).__init__()
 
         self.tokenizer = tokenizer
-        self.list_data_dict = RLAIFVDataset(data_dir, reference_model, tokenizer,multimodal_cfg['image_token_len'], multimodal_cfg['image_processor'], multimodal_cfg['use_im_start_end'], is_llava15=True)
+        self.list_data_dict = RLAIFVDataset(
+            data_dir,
+            reference_model,
+            tokenizer,
+            multimodal_cfg['image_token_len'],
+            multimodal_cfg['image_processor'],
+            multimodal_cfg['use_im_start_end'],
+            is_llava15=True,
+            jsonl_file=jsonl_file,
+        )
         self.multimodal_cfg = multimodal_cfg
         self.multimodal_cfg['keep_image_tag'] = True
 
@@ -233,6 +244,7 @@ class DPODataset(Dataset):
 def make_dpo_data_module(tokenizer, data_args,reference_model):
     train_dataset = DPODataset(tokenizer=tokenizer,
                                data_dir=data_args.data_dir,
+                               jsonl_file=data_args.jsonl_file,
                                multimodal_cfg=dict(
                                    is_multimodal=data_args.is_multimodal,
                                    image_token_len=data_args.image_token_len,
@@ -257,6 +269,7 @@ def make_dpo_data_module(tokenizer, data_args,reference_model):
         for name in data_args.eval_data_source_names:
             eval_dataset = DPODataset(tokenizer=tokenizer,
                                       data_dir=data_args.data_dir,
+                                      jsonl_file=data_args.jsonl_file,
                                       multimodal_cfg=dict(
                                           is_multimodal=data_args.is_multimodal,
                                           image_token_len=data_args.image_token_len,
